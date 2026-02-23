@@ -1,0 +1,47 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap");
+@import "tailwindcss";
+
+* {
+  font-family: "Outfit", sans-serif;
+}
+
+.no-scrollbar ::-webkit-scrollbar {
+  display: none;
+}
+
+/* Google Translate */
+
+.goog-te-banner-frame.skiptranslate {
+  display: none !important;
+}
+body {
+  top: 0 !important;
+}
+
+#gt-container .goog-te-gadget {
+  font-family: inherit !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+}
+
+#gt-container .goog-te-combo {
+  width: 100% !important;
+  padding: 0.5rem 0.6rem !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem !important;
+  background: #fff !important;
+  font-size: 0.875rem !important;
+  outline: none !important;
+}
+
+#gt-container .goog-te-gadget > span {
+  display: none !important;
+}
+
+.goog-te-menu-frame {
+  z-index: 999999 !important;
+}
+
+html[dir="rtl"] body {
+  direction: rtl;
+}
