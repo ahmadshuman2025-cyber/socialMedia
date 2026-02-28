@@ -1,42 +1,303 @@
+// import React, { useState } from "react";
+// import { Pencil } from "lucide-react";
+// import { toast } from "react-hot-toast";
+// import { useDispatch, useSelector } from "react-redux";
+// import { updateUser } from "../features/user/userSlice";
+// import { useAuth } from "@clerk/clerk-react";
+
+// const ProfileModel = ({ setShowEdit }) => {
+//   const dispatch = useDispatch();
+//   const { getToken } = useAuth();
+//   const user = useSelector((state) => state.user.value);
+
+//   const [editForm, setEditForm] = useState({
+//     username: user.username,
+//     bio: user.bio,
+//     location: user.location,
+//     profile_picture: null,
+//     cover_photo: null,
+//     full_name: user.full_name,
+//   });
+
+//   const saveProfileAPI = async (payload) => {
+//     await new Promise((r) => setTimeout(r, 3000));
+
+//     return { ok: true };
+//   };
+
+//   const handleSaveProfile = async (e) => {
+//     e.preventDefault();
+
+//     try {
+//       const formData = new FormData();
+//       const {
+//         username,
+//         bio,
+//         location,
+//         profile_picture,
+//         cover_photo,
+//         full_name,
+//       } = editForm;
+
+//       formData.append("username", username || "");
+//       formData.append("bio", bio || "");
+//       formData.append("location", location || "");
+//       formData.append("full_name", full_name || "");
+
+//       if (profile_picture) formData.append("profile", profile_picture);
+//       if (cover_photo) formData.append("cover", cover_photo);
+
+//       const token = await getToken();
+
+//       await toast.promise(
+//         api.post("/api/user/upload", formData, {
+//           headers: {
+//             Authorization: `Bearer ${token}`,
+//             "Content-Type": "multipart/form-data",
+//           },
+//         }),
+//         {
+//           loading: "Saving...",
+//           success: "Profile updated 🎉",
+//           error: "Failed to save profile",
+//         },
+//       );
+
+//       setShowEdit(false);
+//     } catch (error) {
+//       toast.error(error.message);
+//     }
+//   };
+
+//   return (
+//     <div className="fixed top-0 left-0 right-0 bottom-0 z-110 h-screen overflow-y-scroll bg-black/50">
+//       <div className="max-w-2xl sm:py-6 mx-auto">
+//         <div className="bg-white rounded-lg shadow p-6">
+//           <h1 className="text-2xl font-bold text-gray-900 mb-6">
+//             Edit Profile
+//           </h1>
+
+//           <form className="space-y-4" onSubmit={handleSaveProfile}>
+//             <div className="flex flex-col items-start gap-3">
+//               <label
+//                 htmlFor="profile_picture"
+//                 className="block text-sm font-medium text-gray-700 mb-1"
+//               >
+//                 Profile Picture
+//                 <input
+//                   type="file"
+//                   hidden
+//                   accept="image/*"
+//                   id="profile_picture"
+//                   onChange={(e) =>
+//                     setEditForm({
+//                       ...editForm,
+//                       profile_picture: e.target.files[0],
+//                     })
+//                   }
+//                 />
+//                 <div className="group/profile relative">
+//                   <img
+//                     src={
+//                       editForm.profile_picture
+//                         ? URL.createObjectURL(editForm.profile_picture)
+//                         : user.profile_picture
+//                     }
+//                     alt=""
+//                     className="w-24 h-24 rounded-full object-cover mt-2"
+//                   />
+//                   <div className="absolute hidden group-hover/profile:flex top-0 left-0 right-0 bottom-0 bg-black/20 rounded-full items-center justify-center">
+//                     <Pencil className="w-5 h-5 text-white" />
+//                   </div>
+//                 </div>
+//               </label>
+//             </div>
+
+//             <div className="flex flex-col items-start gap-3">
+//               <label
+//                 htmlFor="cover_photo"
+//                 className="block text-sm font-medium text-gray-700 mb-1"
+//               >
+//                 Cover Photo
+//                 <input
+//                   type="file"
+//                   hidden
+//                   accept="image/*"
+//                   id="cover_photo"
+//                   onChange={(e) =>
+//                     setEditForm({ ...editForm, cover_photo: e.target.files[0] })
+//                   }
+//                 />
+//                 <div className="group/cover relative">
+//                   <img
+//                     src={
+//                       editForm.cover_photo
+//                         ? URL.createObjectURL(editForm.cover_photo)
+//                         : user.cover_photo
+//                     }
+//                     alt=""
+//                     className="w-80 h-40 rounded-lg bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 object-cover mt-2"
+//                   />
+//                   <div className="absolute hidden group-hover/cover:flex top-0 left-0 right-0 bottom-0 bg-black/20 rounded-lg items-center justify-center">
+//                     <Pencil className="w-5 h-5 text-white" />
+//                   </div>
+//                 </div>
+//               </label>
+//             </div>
+
+//             <div>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">
+//                 Name
+//               </label>
+//               <input
+//                 type="text"
+//                 className="w-full p-3 border-gray-200 rounded-lg"
+//                 placeholder="Please Enter Your Full Name"
+//                 value={editForm.full_name}
+//                 onChange={(e) =>
+//                   setEditForm({ ...editForm, full_name: e.target.value })
+//                 }
+//               />
+//             </div>
+
+//             <div>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">
+//                 Username
+//               </label>
+//               <input
+//                 type="text"
+//                 className="w-full p-3 border-gray-200 rounded-lg mb-1"
+//                 placeholder="Please Enter a Username"
+//                 value={editForm.username}
+//                 onChange={(e) =>
+//                   setEditForm({ ...editForm, username: e.target.value })
+//                 }
+//               />
+//             </div>
+
+//             <div>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">
+//                 Bio
+//               </label>
+//               <textarea
+//                 rows={3}
+//                 className="w-full p-3 border-gray-200 rounded-lg"
+//                 placeholder="Please Enter Your Bio"
+//                 value={editForm.bio}
+//                 onChange={(e) =>
+//                   setEditForm({ ...editForm, bio: e.target.value })
+//                 }
+//               />
+//             </div>
+
+//             <div>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">
+//                 Location
+//               </label>
+//               <input
+//                 type="text"
+//                 className="w-full p-3 border-gray-200 rounded-lg"
+//                 placeholder="Please Enter Your Location"
+//                 value={editForm.location}
+//                 onChange={(e) =>
+//                   setEditForm({ ...editForm, location: e.target.value })
+//                 }
+//               />
+//             </div>
+
+//             <div className="flex justify-end space-x-3 pt-6">
+//               <button
+//                 onClick={() => setShowEdit(false)}
+//                 type="button"
+//                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 type="submit"
+//                 className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition cursor-pointer"
+//               >
+//                 Save Changes
+//               </button>
+//             </div>
+//           </form>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default ProfileModel;
+
 import React, { useState } from "react";
-import { dummyUserData } from "../assets/assets";
 import { Pencil } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useSelector } from "react-redux";
+import { useAuth } from "@clerk/clerk-react";
+import api from "../api/axios";
 
 const ProfileModel = ({ setShowEdit }) => {
-  const user = dummyUserData;
+  const { getToken } = useAuth();
+  const user = useSelector((state) => state.user.value);
+
+  // Prevent crash if user not loaded yet
+  if (!user) return null;
 
   const [editForm, setEditForm] = useState({
-    username: user.username,
-    bio: user.bio,
-    location: user.location,
+    username: user.username || "",
+    bio: user.bio || "",
+    location: user.location || "",
     profile_picture: null,
     cover_photo: null,
-    full_name: user.full_name,
+    full_name: user.full_name || "",
   });
-
-  const saveProfileAPI = async (payload) => {
-    await new Promise((r) => setTimeout(r, 3000));
-
-    return { ok: true };
-  };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
 
-    await toast.promise(saveProfileAPI(editForm), {
-      loading: "Saving...",
-      success: "Profile updated 🎉",
-      error: "Failed to save profile",
-    });
+    try {
+      const formData = new FormData();
+      const {
+        username,
+        bio,
+        location,
+        profile_picture,
+        cover_photo,
+        full_name,
+      } = editForm;
 
-    setTimeout(() => {
+      formData.append("username", username);
+      formData.append("bio", bio);
+      formData.append("location", location);
+      formData.append("full_name", full_name);
+
+      if (profile_picture) formData.append("profile", profile_picture);
+      if (cover_photo) formData.append("cover", cover_photo);
+
+      const token = await getToken();
+
+      await toast.promise(
+        api.post("/api/user/upload", formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }),
+        {
+          loading: "Saving...",
+          success: "Profile updated 🎉",
+          error: "Failed to save profile",
+        },
+      );
+
       setShowEdit(false);
-    }, 1000);
+    } catch (error) {
+      toast.error(error.message);
+    }
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 bottom-0 z-110 h-screen overflow-y-scroll bg-black/50">
+    <div className="fixed inset-0 z-50 h-screen overflow-y-scroll bg-black/50">
       <div className="max-w-2xl sm:py-6 mx-auto">
         <div className="bg-white rounded-lg shadow p-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">
@@ -44,17 +305,14 @@ const ProfileModel = ({ setShowEdit }) => {
           </h1>
 
           <form className="space-y-4" onSubmit={handleSaveProfile}>
+            {/* Profile Picture */}
             <div className="flex flex-col items-start gap-3">
-              <label
-                htmlFor="profile_picture"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label className="block text-sm font-medium text-gray-700">
                 Profile Picture
                 <input
                   type="file"
                   hidden
                   accept="image/*"
-                  id="profile_picture"
                   onChange={(e) =>
                     setEditForm({
                       ...editForm,
@@ -62,7 +320,7 @@ const ProfileModel = ({ setShowEdit }) => {
                     })
                   }
                 />
-                <div className="group/profile relative">
+                <div className="relative mt-2 cursor-pointer">
                   <img
                     src={
                       editForm.profile_picture
@@ -70,31 +328,31 @@ const ProfileModel = ({ setShowEdit }) => {
                         : user.profile_picture
                     }
                     alt=""
-                    className="w-24 h-24 rounded-full object-cover mt-2"
+                    className="w-24 h-24 rounded-full object-cover"
                   />
-                  <div className="absolute hidden group-hover/profile:flex top-0 left-0 right-0 bottom-0 bg-black/20 rounded-full items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full opacity-0 hover:opacity-100 transition">
                     <Pencil className="w-5 h-5 text-white" />
                   </div>
                 </div>
               </label>
             </div>
 
+            {/* Cover Photo */}
             <div className="flex flex-col items-start gap-3">
-              <label
-                htmlFor="cover_photo"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label className="block text-sm font-medium text-gray-700">
                 Cover Photo
                 <input
                   type="file"
                   hidden
                   accept="image/*"
-                  id="cover_photo"
                   onChange={(e) =>
-                    setEditForm({ ...editForm, cover_photo: e.target.files[0] })
+                    setEditForm({
+                      ...editForm,
+                      cover_photo: e.target.files[0],
+                    })
                   }
                 />
-                <div className="group/cover relative">
+                <div className="relative mt-2 cursor-pointer">
                   <img
                     src={
                       editForm.cover_photo
@@ -102,23 +360,23 @@ const ProfileModel = ({ setShowEdit }) => {
                         : user.cover_photo
                     }
                     alt=""
-                    className="w-80 h-40 rounded-lg bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 object-cover mt-2"
+                    className="w-80 h-40 rounded-lg object-cover"
                   />
-                  <div className="absolute hidden group-hover/cover:flex top-0 left-0 right-0 bottom-0 bg-black/20 rounded-lg items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg opacity-0 hover:opacity-100 transition">
                     <Pencil className="w-5 h-5 text-white" />
                   </div>
                 </div>
               </label>
             </div>
 
+            {/* Full Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Name
               </label>
               <input
                 type="text"
-                className="w-full p-3 border-gray-200 rounded-lg"
-                placeholder="Please Enter Your Full Name"
+                className="w-full p-3 border border-gray-200 rounded-lg"
                 value={editForm.full_name}
                 onChange={(e) =>
                   setEditForm({ ...editForm, full_name: e.target.value })
@@ -126,14 +384,14 @@ const ProfileModel = ({ setShowEdit }) => {
               />
             </div>
 
+            {/* Username */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Username
               </label>
               <input
                 type="text"
-                className="w-full p-3 border-gray-200 rounded-lg mb-1"
-                placeholder="Please Enter a Username"
+                className="w-full p-3 border border-gray-200 rounded-lg"
                 value={editForm.username}
                 onChange={(e) =>
                   setEditForm({ ...editForm, username: e.target.value })
@@ -141,14 +399,14 @@ const ProfileModel = ({ setShowEdit }) => {
               />
             </div>
 
+            {/* Bio */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Bio
               </label>
               <textarea
                 rows={3}
-                className="w-full p-3 border-gray-200 rounded-lg"
-                placeholder="Please Enter Your Bio"
+                className="w-full p-3 border border-gray-200 rounded-lg"
                 value={editForm.bio}
                 onChange={(e) =>
                   setEditForm({ ...editForm, bio: e.target.value })
@@ -156,14 +414,14 @@ const ProfileModel = ({ setShowEdit }) => {
               />
             </div>
 
+            {/* Location */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Location
               </label>
               <input
                 type="text"
-                className="w-full p-3 border-gray-200 rounded-lg"
-                placeholder="Please Enter Your Location"
+                className="w-full p-3 border border-gray-200 rounded-lg"
                 value={editForm.location}
                 onChange={(e) =>
                   setEditForm({ ...editForm, location: e.target.value })
@@ -171,17 +429,19 @@ const ProfileModel = ({ setShowEdit }) => {
               />
             </div>
 
+            {/* Buttons */}
             <div className="flex justify-end space-x-3 pt-6">
               <button
-                onClick={() => setShowEdit(false)}
                 type="button"
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                onClick={() => setShowEdit(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition"
               >
                 Cancel
               </button>
+
               <button
                 type="submit"
-                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition cursor-pointer"
+                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition"
               >
                 Save Changes
               </button>

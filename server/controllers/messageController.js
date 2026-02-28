@@ -40,16 +40,18 @@ export const sendMessage = async (req, res) => {
     const image = req.file;
 
     let media_url = "";
-    let message_type = image ? "image" : "text";
+    const message_type = image ? "image" : "text";
 
-    if (message_type === "image") {
+    if (image) {
       const fileBuffer = fs.readFileSync(image.path);
+
       const response = await imagekit.upload({
         file: fileBuffer,
         fileName: image.originalname,
         folder: "messages",
       });
-      media_url = response.url({
+
+      media_url = imagekit.url({
         path: response.filePath,
         transformation: [
           { quality: "auto" },
@@ -57,7 +59,11 @@ export const sendMessage = async (req, res) => {
           { width: "1280" },
         ],
       });
+
+      // optional cleanup (recommended)
+      fs.unlinkSync(image.path);
     }
+
     const message = await Message.create({
       from_user_id: userId,
       to_user_id,
@@ -65,21 +71,24 @@ export const sendMessage = async (req, res) => {
       message_type,
       media_url,
     });
-    res.json({ success: true, message: "Message sent successfully" });
-    // Send message to to_user_id using SSE
 
+    // ✅ populate like SSE does, so frontend has from_user_id data too
     const messageWithUserData = await Message.findById(message._id).populate(
       "from_user_id",
     );
 
+    // ✅ SEND SSE first (optional order)
     if (connections[to_user_id]) {
       connections[to_user_id].write(
         `data: ${JSON.stringify(messageWithUserData)}\n\n`,
       );
     }
+
+    // ✅ IMPORTANT: respond with the message OBJECT, not a string
+    return res.json({ success: true, message: messageWithUserData });
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
 

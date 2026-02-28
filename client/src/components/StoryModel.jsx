@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { ArrowLeft, Text as TextIcon, Upload, Sparkle } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useAuth } from "@clerk/clerk-react";
+import api from "../api/axios";
 
 const StoryModel = ({ setShowModel, fetchStories }) => {
   const bgColors = [
@@ -19,45 +21,88 @@ const StoryModel = ({ setShowModel, fetchStories }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const { getToken } = useAuth();
+
+  const MAX_VIDEO_DURATION = 60; // seconds
+  const MAX_VIDEO_SIZE_MB = 50; // MB
+
   const handleMediaUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setMedia(file);
-    setPreviewUrl(URL.createObjectURL(file));
-  };
 
-  const createStoryAPI = async ({ mode, text, background, media }) => {
-    await new Promise((r) => setTimeout(r, 800));
+    if (file.type.startsWith("video")) {
+      if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+        toast.error(`Video file size cannot exceed ${MAX_VIDEO_SIZE_MB} MB.`);
+        setMedia(null);
+        setPreviewUrl(null);
+        return;
+      }
 
-    return { ok: true };
+      const video = document.createElement("video");
+      video.preload = "metadata";
+
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+
+        if (video.duration > MAX_VIDEO_DURATION) {
+          toast.error("Video duration cannot exceed 1 minute.");
+          setMedia(null);
+          setPreviewUrl(null);
+        } else {
+          setMedia(file);
+          setPreviewUrl(URL.createObjectURL(file));
+          setText("");
+          setMode("media");
+        }
+      };
+
+      video.src = URL.createObjectURL(file);
+    } else if (file.type.startsWith("image")) {
+      setMedia(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setText("");
+      setMode("media");
+    } else {
+      toast.error("Only image/video files are allowed.");
+    }
   };
 
   const handleCreateStory = async () => {
-    if (mode === "text" && !text.trim()) {
-      toast.error("Please write something.");
-      return;
-    }
-    if (mode === "media" && !media) {
-      toast.error("Please select a photo or video.");
-      return;
+    const media_type =
+      mode === "media"
+        ? media?.type?.startsWith("image")
+          ? "image"
+          : "video"
+        : "text";
+
+    if (media_type === "text" && !text.trim()) {
+      throw new Error("Please enter some text");
     }
 
     setSubmitting(true);
+
     try {
-      await toast.promise(createStoryAPI({ mode, text, background, media }), {
-        loading: "Saving...",
-        success: "Story created 🎉",
-        error: (e) => e?.message || "Failed to create story",
+      const formData = new FormData();
+      formData.append("content", text);
+      formData.append("media_type", media_type);
+      formData.append("background_color", background);
+      if (media) formData.append("media", media);
+
+      const token = await getToken();
+
+      const { data } = await api.post("/api/story/create", formData, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      setText("");
-      setMedia(null);
-      setPreviewUrl(null);
-      setMode("text");
-      fetchStories?.();
-      setTimeout(() => {
+      if (data.success) {
+        toast.success("Story created successfully");
         setShowModel(false);
-      }, 1000);
+        fetchStories?.();
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
     } finally {
       setSubmitting(false);
     }
@@ -143,10 +188,7 @@ const StoryModel = ({ setShowModel, fetchStories }) => {
             }`}
           >
             <input
-              onChange={(e) => {
-                handleMediaUpload(e);
-                setMode("media");
-              }}
+              onChange={handleMediaUpload}
               type="file"
               accept="image/*,video/*"
               className="hidden"
@@ -158,12 +200,17 @@ const StoryModel = ({ setShowModel, fetchStories }) => {
         <button
           type="button"
           disabled={submitting}
-          onClick={handleCreateStory}
+          onClick={() =>
+            toast.promise(handleCreateStory(), {
+              loading: "Saving...",
+              success: "Saved!",
+              error: "Failed!",
+            })
+          }
           className="flex items-center justify-center gap-2 text-white py-3 mt-4 w-full rounded bg-gradient-to-r from-indigo-500 to-purple-600
                      hover:from-indigo-700 hover:to-purple-800 active:scale-95 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <Sparkle size={18} />
-          {submitting ? "Saving..." : "Create Story"}
+          <Sparkle size={18} /> Create Story
         </button>
       </div>
     </div>

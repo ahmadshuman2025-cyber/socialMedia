@@ -2,37 +2,64 @@ import React, { useMemo, useState } from "react";
 import { BadgeCheck, Heart, MessageCircle, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
+import { useSelector } from "react-redux";
+import { useAuth } from "@clerk/clerk-react";
+import api from "../api/axios";
+import toast from "react-hot-toast";
 
-const PostCard = ({
-  post,
-  currentUserId,
-  onToggleLike,
-  onAddComment,
-  onShared,
-}) => {
+const PostCard = ({ post }) => {
   const navigate = useNavigate();
+  const { getToken } = useAuth();
+  const currentUser = useSelector((state) => state.user.value);
+
   const [commentText, setCommentText] = useState("");
+
+  // ✅ keep likes in state (safe array)
+  const [likes, setLikes] = useState(
+    Array.isArray(post.likes_count) ? post.likes_count : [],
+  );
+
+  const comments = Array.isArray(post.comments) ? post.comments : [];
+  const shareCount = Number.isFinite(post.shares) ? post.shares : 0;
+
+  const likedByMe = currentUser?._id ? likes.includes(currentUser._id) : false;
+  const likeCount = likes.length;
 
   const postWithHashtags = useMemo(
     () =>
       (post.content || "").replace(
         /(#\w+)/g,
-        '<span class="text-indigo-600">$1</span>'
+        '<span class="text-indigo-600">$1</span>',
       ),
-    [post.content]
+    [post.content],
   );
 
-  const likes = Array.isArray(post.likes_count) ? post.likes_count : [];
-  const likedByMe = currentUserId ? likes.includes(currentUserId) : false;
-  const likeCount = likes.length;
-  const comments = Array.isArray(post.comments) ? post.comments : [];
-  const shareCount = Number.isFinite(post.shares) ? post.shares : 0;
+  const handleLike = async () => {
+    try {
+      const { data } = await api.post(
+        "/api/post/like",
+        { postId: post._id },
+        {
+          headers: { Authorization: `Bearer ${await getToken()}` },
+        },
+      );
 
-  const handleSubmitComment = (e) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-    onAddComment(commentText);
-    setCommentText("");
+      if (data.success) {
+        toast.success(data.message);
+
+        setLikes((prev) => {
+          if (prev.includes(currentUser._id)) {
+            return prev.filter((id) => id !== currentUser._id);
+          } else {
+            return [...prev, currentUser._id];
+          }
+        });
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
   };
 
   const handleShare = async () => {
@@ -44,15 +71,22 @@ const PostCard = ({
           text: post.content?.slice(0, 140) || "Check this post!",
           url,
         });
-        onShared();
       } else {
         await navigator.clipboard.writeText(url);
-        onShared();
         alert("Link copied to clipboard");
       }
     } catch {
       alert("Failed to share the post.");
     }
+  };
+
+  const handleSubmitComment = (e) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+
+    // You can connect this to backend later
+    toast.success("Comment added (UI only)");
+    setCommentText("");
   };
 
   return (
@@ -104,9 +138,7 @@ const PostCard = ({
                   alt={`Post image ${index + 1}`}
                   className={`w-full ${
                     isSingle ? "h-auto" : "h-48"
-                  } object-cover
-                    motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out
-                    group-hover:scale-105`}
+                  } object-cover group-hover:scale-105 transition-transform duration-300`}
                 />
               </div>
             );
@@ -116,7 +148,7 @@ const PostCard = ({
       <div className="flex items-center gap-6 text-gray-600 text-sm pt-2 border-t border-gray-300">
         <button
           type="button"
-          onClick={onToggleLike}
+          onClick={handleLike}
           aria-pressed={likedByMe}
           className={`flex items-center gap-1 hover:opacity-80 ${
             likedByMe ? "text-rose-600" : ""
