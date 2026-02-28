@@ -14,12 +14,19 @@ const PostCard = ({ post }) => {
 
   const [commentText, setCommentText] = useState("");
 
-  // ✅ keep likes in state (safe array)
+  //  Likes in state
   const [likes, setLikes] = useState(
     Array.isArray(post.likes_count) ? post.likes_count : [],
   );
 
-  const comments = Array.isArray(post.comments) ? post.comments : [];
+  //  Comments in state
+  const [comments, setComments] = useState(
+    Array.isArray(post.comments) ? post.comments : [],
+  );
+
+  //  Toggle dropdown for comments
+  const [showComments, setShowComments] = useState(false);
+
   const shareCount = Number.isFinite(post.shares) ? post.shares : 0;
 
   const likedByMe = currentUser?._id ? likes.includes(currentUser._id) : false;
@@ -45,8 +52,6 @@ const PostCard = ({ post }) => {
       );
 
       if (data.success) {
-        toast.success(data.message);
-
         setLikes((prev) => {
           if (prev.includes(currentUser._id)) {
             return prev.filter((id) => id !== currentUser._id);
@@ -80,17 +85,40 @@ const PostCard = ({ post }) => {
     }
   };
 
-  const handleSubmitComment = (e) => {
+  //   backend comment submit + open dropdown
+  const handleSubmitComment = async (e) => {
     e.preventDefault();
     if (!commentText.trim()) return;
 
-    // You can connect this to backend later
-    toast.success("Comment added (UI only)");
-    setCommentText("");
+    try {
+      const token = await getToken();
+
+      const { data } = await api.post(
+        "/api/post/comment",
+        { postId: post._id, text: commentText },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      if (!data.success) {
+        return toast.error(data.message);
+      }
+
+      toast.success("Comment added");
+      setCommentText("");
+      setShowComments(true);
+
+      //  use returned post with populated comments
+      if (data.post && Array.isArray(data.post.comments)) {
+        setComments(data.post.comments);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
   };
 
   return (
     <div className="bg-white rounded-xl shadow p-4 space-y-4 w-full max-w-2xl">
+      {/* Header */}
       <div
         className="inline-flex items-center gap-3 cursor-pointer"
         onClick={() => navigate(`/profile/${post.user._id}`)}
@@ -115,6 +143,7 @@ const PostCard = ({ post }) => {
         </div>
       </div>
 
+      {/* Content */}
       {!!post.content && (
         <div
           className="text-gray-800 text-sm whitespace-pre-line"
@@ -122,6 +151,7 @@ const PostCard = ({ post }) => {
         />
       )}
 
+      {/* Images */}
       <div className="grid grid-cols-2 gap-2">
         {Array.isArray(post.image_urls) &&
           post.image_urls.map((img, index) => {
@@ -145,6 +175,7 @@ const PostCard = ({ post }) => {
           })}
       </div>
 
+      {/* Actions */}
       <div className="flex items-center gap-6 text-gray-600 text-sm pt-2 border-t border-gray-300">
         <button
           type="button"
@@ -158,10 +189,15 @@ const PostCard = ({ post }) => {
           {likeCount > 0 && <span>{likeCount}</span>}
         </button>
 
-        <div className="flex items-center gap-1">
+        {/*Click to toggle dropdown */}
+        <button
+          type="button"
+          onClick={() => setShowComments((s) => !s)}
+          className="flex items-center gap-1 hover:opacity-80"
+        >
           <MessageCircle className="w-4 h-4" />
           {comments.length > 0 && <span>{comments.length}</span>}
-        </div>
+        </button>
 
         <button
           type="button"
@@ -173,35 +209,46 @@ const PostCard = ({ post }) => {
         </button>
       </div>
 
-      <form
-        onSubmit={handleSubmitComment}
-        className="flex items-center gap-2 pt-2"
-      >
-        <input
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          placeholder="Write a comment…"
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-        <button
-          type="submit"
-          className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm hover:bg-indigo-700"
-        >
-          Post
-        </button>
-      </form>
+      {/*  Comments dropdown */}
+      {showComments && (
+        <div className="mt-2 border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-3">
+          {/* Write comment */}
+          <form
+            onSubmit={handleSubmitComment}
+            className="flex items-center gap-2"
+          >
+            <input
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Write a comment…"
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <button
+              type="submit"
+              className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+            >
+              Post
+            </button>
+          </form>
 
-      {comments.length > 0 && (
-        <div className="space-y-2">
-          {comments.slice(0, 3).map((c) => (
-            <div key={c._id} className="text-sm text-gray-700">
-              <span className="font-medium mr-1">{c.user.full_name}:</span>
-              <span>{c.text}</span>
-            </div>
-          ))}
-          {comments.length > 3 && (
-            <div className="text-xs text-gray-500">
-              View all {comments.length} comments
+          {/* Comments list */}
+          {comments.length === 0 ? (
+            <p className="text-sm text-gray-500">No comments yet.</p>
+          ) : (
+            <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+              {comments.map((c) => (
+                <div key={c._id} className="text-sm text-gray-700">
+                  <span className="font-medium mr-1">
+                    {c.user?.full_name || "User"}:
+                  </span>
+                  <span>{c.text}</span>
+                  {c.createdAt && (
+                    <span className="ml-2 text-xs text-gray-400">
+                      {moment(c.createdAt).fromNow()}
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>

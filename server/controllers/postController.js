@@ -3,12 +3,12 @@ import imagekit from "../configs/imageKit.js";
 import Post from "../models/Post.js";
 import User from "../models/User.js";
 
-// Add Post
+// add post
 export const addPost = async (req, res) => {
   try {
     const { userId } = req.auth();
     const { content, post_type } = req.body;
-    const images = req.files;
+    const images = req.files || [];
 
     let image_urls = [];
 
@@ -21,6 +21,7 @@ export const addPost = async (req, res) => {
             fileName: image.originalname,
             folder: "posts",
           });
+
           const url = imagekit.url({
             path: response.filePath,
             transformation: [
@@ -29,18 +30,22 @@ export const addPost = async (req, res) => {
               { width: "1280" },
             ],
           });
+
+          // optional cleanup
+          fs.unlinkSync(image.path);
+
           return url;
         }),
       );
     }
 
     await Post.create({ user: userId, content, image_urls, post_type });
-    res.json({ success: true, message: "Post created successfully" });
-  } catch (error) {}
-  console.log(error);
-  res.json({ success: false, message: error.message });
+    return res.json({ success: true, message: "Post created successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.json({ success: false, message: error.message });
+  }
 };
-
 // Get Posts
 export const getFeedPosts = async (req, res) => {
   try {
@@ -81,5 +86,39 @@ export const likePost = async (req, res) => {
   } catch (error) {
     console.log(error);
     res.json({ success: false, message: error.message });
+  }
+};
+
+// Add Comment
+export const addComment = async (req, res) => {
+  try {
+    const { userId } = req.auth();
+    const { postId, text } = req.body;
+
+    if (!text || !text.trim()) {
+      return res.json({ success: false, message: "Comment cannot be empty" });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.json({ success: false, message: "Post not found" });
+    }
+
+    post.comments.unshift({ user: userId, text: text.trim() });
+    await post.save();
+
+    //  return the last inserted comment populated (so frontend can show name/avatar)
+    const updatedPost = await Post.findById(postId)
+      .populate("user")
+      .populate("comments.user");
+
+    return res.json({
+      success: true,
+      message: "Comment added",
+      post: updatedPost,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.json({ success: false, message: error.message });
   }
 };
